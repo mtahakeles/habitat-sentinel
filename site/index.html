@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Habitat Sentinel — Wildfire Risk & Detection Dashboard</title>
+<meta name="description" content="Real-time global wildfire tracking (NASA EONET) and a transparent, MODIS-trained vegetation-heat risk model. Built for Hack the Habitat.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wordmark"><span class="dot"></span> HABITAT SENTINEL</div>
+  <div class="status-chip" id="status-chip">Connecting to satellite feed…</div>
+</div>
+
+<header class="hero container">
+  <p class="eyebrow">Hack the Habitat — Tech that protects the planet</p>
+  <h1>Where are fires burning, and where could they start?</h1>
+  <p class="lede">Habitat Sentinel pulls live wildfire detections straight from NASA's Earth Observatory Natural Event Tracker, and pairs them with a transparent risk model trained on real satellite vegetation and heat data — so anyone can see where fire risk is building, not just where it already struck.</p>
+
+  <div class="telemetry-row">
+    <div class="telemetry-cell">
+      <p class="label">Open wildfire events</p>
+      <p class="value" id="tele-count">—</p>
+      <p class="sub">worldwide, NASA EONET, live</p>
+    </div>
+    <div class="telemetry-cell">
+      <p class="label">Most active region</p>
+      <p class="value muted" id="tele-region">—</p>
+      <p class="sub">by detection count</p>
+    </div>
+    <div class="telemetry-cell">
+      <p class="label">Feed last updated</p>
+      <p class="value muted" id="tele-updated">—</p>
+      <p class="sub" id="tele-updated-sub">UTC</p>
+    </div>
+  </div>
+</header>
+
+<section class="block container" id="map-section">
+  <div class="block-head">
+    <div>
+      <p class="tag">01 — Live detection</p>
+      <h2>Every open wildfire event, right now</h2>
+      <p>Loaded in your browser from NASA EONET. Markers pulse while an event is still open.</p>
+    </div>
+  </div>
+  <div id="map"></div>
+  <div class="map-legend">
+    <span><i class="swatch" style="background:#ff6a3d"></i> Active wildfire</span>
+    <span><i class="swatch" style="background:#4fd1ae"></i> Recently closed</span>
+  </div>
+  <p class="map-note">Source: <a href="https://eonet.gsfc.nasa.gov/" target="_blank" rel="noopener">NASA EONET API v3</a>. If your network blocks NASA's servers, the panel below explains how to run it locally instead.</p>
+</section>
+
+<section class="block container" id="risk-section">
+  <div class="block-head">
+    <div>
+      <p class="tag">02 — Risk model</p>
+      <h2>Vegetation–heat risk estimator</h2>
+      <p>Move the sliders to see how vegetation health (NDVI) and land surface temperature (LST) relate to fire risk, according to a model trained on real MODIS-derived observations from Central Canada's forest belt.</p>
+    </div>
+  </div>
+
+  <div class="risk-grid">
+    <div>
+      <div class="control">
+        <label>NDVI — vegetation health <span class="val" id="ndvi-val">0.55</span></label>
+        <input type="range" id="ndvi-slider" min="0.03" max="0.78" step="0.01" value="0.55">
+      </div>
+      <div class="control">
+        <label>LST — land surface temp (scaled) <span class="val" id="lst-val">14615</span></label>
+        <input type="range" id="lst-slider" min="13137" max="15612" step="10" value="14615">
+      </div>
+
+      <div class="note-box">
+        <strong>Read this before trusting the gauge:</strong> the model uses two features and is weighted towards recall. On the held-out test set it flags about 70% of fire cases, but roughly two out of three alarms are false. For early warning I'd rather over-alert than miss fires, but it's a trade-off, not a free lunch.
+      </div>
+
+      <div class="metrics-strip" id="metrics-strip">
+        <!-- filled by JS from model_results.json -->
+      </div>
+    </div>
+
+    <div class="gauge-panel">
+      <p class="gauge-label">Estimated fire risk</p>
+      <div class="gauge-value" id="gauge-value">—</div>
+      <div class="gauge-bar"><div class="gauge-fill" id="gauge-fill"></div></div>
+      <p class="gauge-verdict" id="gauge-verdict">Adjust the sliders to see a live estimate.</p>
+    </div>
+  </div>
+</section>
+
+<section class="block container" id="method-section">
+  <div class="block-head">
+    <div>
+      <p class="tag">03 — Data & methodology</p>
+      <h2>Data and method</h2>
+    </div>
+  </div>
+  <ul class="method-list">
+    <li>
+      <span class="k">Live map</span>
+      <span class="v"><strong>NASA EONET API v3</strong> — open, keyless, real-time natural event tracker maintained by NASA GSFC. Filtered to the <em>wildfires</em> category, open events, fetched client-side. <a href="https://eonet.gsfc.nasa.gov/" target="_blank" rel="noopener">eonet.gsfc.nasa.gov</a></span>
+    </li>
+    <li>
+      <span class="k">Risk model</span>
+      <span class="v"><strong>1,713 real satellite observations</strong> (NDVI, land surface temperature, burned area, fire/no-fire label), derived from NASA MODIS/Terra imagery via LP DAAC over Central Canada's forest region. Published dataset: <a href="https://github.com/ouladsayadyounes/WildFires" target="_blank" rel="noopener">ouladsayadyounes/WildFires</a>.</span>
+    </li>
+    <li>
+      <span class="k">Model</span>
+      <span class="v">Logistic regression (scikit-learn) on 2 features, class-weighted for recall, evaluated on a stratified 25% test split. Training script: <code>analysis/train_risk_model.py</code>.</span>
+    </li>
+    <li>
+      <span class="k">Not included</span>
+      <span class="v">This is not a deployment-grade early-warning system. It doesn't account for wind, humidity, fuel load, or terrain — all of which matter more than NDVI/LST alone in real fire behavior. Treat it as a demo of how far two satellite features get you, not as a forecast.</span>
+    </li>
+  </ul>
+</section>
+
+<footer class="container">
+  <p class="fmark">Built for Hack the Habitat · 2026</p>
+  <div class="links">
+    <a href="https://github.com/mtahakeles" target="_blank" rel="noopener">GitHub</a>
+    <a href="#map-section">Live map</a>
+    <a href="#risk-section">Risk model</a>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
