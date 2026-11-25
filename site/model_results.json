@@ -1,0 +1,57 @@
+{
+  "data_source": "https://github.com/ouladsayadyounes/WildFires",
+  "n_samples_total": 1713,
+  "n_train": 1284,
+  "n_test": 429,
+  "class_balance": {
+    "fire": 386,
+    "no_fire": 1327
+  },
+  "metrics": {
+    "accuracy": 0.648,
+    "precision": 0.3579,
+    "recall": 0.701,
+    "f1": 0.4739,
+    "roc_auc": 0.7098,
+    "confusion_matrix": [
+      [
+        210,
+        122
+      ],
+      [
+        29,
+        68
+      ]
+    ]
+  },
+  "model": {
+    "type": "logistic_regression",
+    "features": [
+      "NDVI",
+      "LST"
+    ],
+    "coefficients": [
+      -0.3353545192421754,
+      0.9156944645114956
+    ],
+    "intercept": -0.20741902575981572,
+    "scaler_mean": [
+      0.5548196542056084,
+      14615.225072415107
+    ],
+    "scaler_scale": [
+      0.09357891422972749,
+      371.1127734180068
+    ]
+  },
+  "feature_ranges": {
+    "ndvi": {
+      "min": 0.030735,
+      "max": 0.781723
+    },
+    "lst": {
+      "min": 13137.0,
+      "max": 15611.570513
+    }
+  }
+}
